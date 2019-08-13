@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <BackupGuard_BackupGuardFree>
+            <version>1.0.0</version>
+        </BackupGuard_BackupGuardFree>
+    </modules>
+    <admin>
+        <routers>
+            <adminhtml>
+                <args>
+                    <modules>
+                        <BackupGuard_BackupGuardFree after="Mage_Adminhtml">BackupGuard_BackupGuardFree_Adminhtml</BackupGuard_BackupGuardFree>
+                    </modules>
+                </args>
+            </adminhtml>
+        </routers>
+    </admin>
+    <adminhtml>
+        <layout>
+            <updates>
+                <backupguardfree>
+                    <file>backupguardfree.xml</file>
+                </backupguardfree>
+            </updates>
+       </layout>
+    </adminhtml>
+    <global>
+        <resources>
+            <backupguardfree_setup>
+                <setup>
+                    <module>BackupGuard_BackupGuardFree</module>
+                    <class>BackupGuard_BackupGuardFree_Model_Resource_Mysql4_Setup</class>
+                </setup>
+                <connection>
+                    <use>core_setup</use>
+                </connection>
+            </backupguardfree_setup>
+
+            <backupguardfree_write>
+                <connection>
+                    <use>core_setup</use>
+                </connection>
+            </backupguardfree_write>
+
+            <backupguardfree_read>
+                <connection>
+                    <use>core_setup</use>
+                </connection>
+            </backupguardfree_read>
+        </resources>
+        <helpers>
+            <backupguardfree>
+                <class>BackupGuard_BackupGuard_Helper</class>
+            </backupguardfree>
+        </helpers>
+    </global>
+</config>

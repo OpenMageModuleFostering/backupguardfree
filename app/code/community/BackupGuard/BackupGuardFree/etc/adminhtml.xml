@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<config>
+    <menu>
+        <backupguardfree module="backupguardfree">
+            <title>Backup Guard Free</title>
+            <action>adminhtml/backupguardfree/backups</action>
+            <sort_order>65</sort_order>
+            <children>
+                <backups module="backupguardfree">
+                    <title>Backups</title>
+                    <action>adminhtml/backupguardfree/backups</action>
+                    <sort_order>0</sort_order>
+                </backups>
+            </children>
+        </backupguardfree>
+    </menu>
+    <acl>
+        <resources>
+            <all>
+                <title>Allow Everything</title>
+            </all>
+            <admin>
+                <children>
+                    <backupguardfree>
+                        <title>Backup Guard Free</title>
+                    </backupguardfree>
+                    <system>
+                        <children>
+                            <config>
+                                <children>
+                                    <backupguardfree>
+                                        <title>Backup Guard Free</title>
+                                        <sort_order>50</sort_order>
+                                    </backupguardfree>
+                                </children>
+                            </config>
+                        </children>
+                    </system>
+                </children>
+            </admin>
+        </resources>
+    </acl>
+</config>

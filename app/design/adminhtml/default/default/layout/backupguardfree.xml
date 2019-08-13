@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+
+<layout version="1.0.0">
+	<default>
+	</default>
+	<adminhtml_backupguardfree_backups>
+		<reference name="content">
+			<block type="core/template" name="header" template="backupguardfree/header.phtml" />
+			<block type="core/template" name="sidebar" template="backupguardfree/sidebar.phtml" />
+			<block type="core/template" name="backups" template="backupguardfree/backups.phtml" />
+			<block type="core/template" name="modal" template="backupguardfree/modal.phtml" />
+			<block type="core/template" name="footer" template="backupguardfree/footer.phtml" />
+		</reference>
+		<reference name="head">
+			<action method="addItem">
+            	<type>skin_css</type>
+            	<name>css/BackupGuardFree/sgstyles.less</name>
+            	<params>id="less_inc"</params>
+			</action>
+			<action method="addItem">
+            	<type>skin_css</type>
+            	<name>css/BackupGuardFree/spinner.css</name>
+			</action>
+        </reference>
+	</adminhtml_backupguardfree_backups>
+</layout>

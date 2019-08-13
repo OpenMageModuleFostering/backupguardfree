@@ -41,24 +41,6 @@ define('SG_BACKUP_DWONLOAD_TYPE_SGBP', 1);
 define('SG_BACKUP_DWONLOAD_TYPE_BACKUP_LOG', 2);
 define('SG_BACKUP_DWONLOAD_TYPE_RESTORE_LOG', 3);
 
-//Mail
-define('SG_MAIL_BACKUP_SUCCESS_SUBJECT', 'Backup Succeeded');
-define('SG_MAIL_BACKUP_FAIL_SUBJECT', 'Backup Failed');
-define('SG_MAIL_RESTORE_SUCCESS_SUBJECT', 'Restore Succeeded');
-define('SG_MAIL_RESTORE_FAIL_SUBJECT', 'Restore Failed');
-
-//Storage
-define('SG_STORAGE_FTP', 1);
-define('SG_STORAGE_DROPBOX', 2);
-define('SG_STORAGE_GOOGLE_DRIVE', 3);
-define('SG_STORAGE_GOOGLE_DRIVE_CLIENT_ID', '1030123017859-vfdlqkjhiuuu5n36pbov93v9ruo6jpj5.apps.googleusercontent.com');
-define('SG_STORAGE_GOOGLE_DRIVE_SECRET', 'oUcZwC17q5ZSbYahnQkGYpyH');
-define('SG_STORAGE_GOOGLE_DRIVE_REDIRECT_URI', 'https://backup-guard.com/gdrive/');
-define('SG_STORAGE_DROPBOX_KEY', 'n3yhajm64h88m9t');
-define('SG_STORAGE_DROPBOX_SECRET', 's8crjkls7f9wqtd');
-define('SG_STORAGE_DROPBOX_CLIENT_ID', 'backup-guard');
-define('SG_STORAGE_DROPBOX_REDIRECT_URI', 'https://backup-guard.com/dropbox/');
-
 //The following constants can be modified at run-time
 define('SG_ACTION_BACKUP_FILES_AVAILABLE', 1);
 define('SG_ACTION_BACKUP_DATABASE_AVAILABLE', 1);

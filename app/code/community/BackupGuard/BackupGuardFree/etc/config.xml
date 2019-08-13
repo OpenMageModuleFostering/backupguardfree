@@ -51,7 +51,7 @@
         </resources>
         <helpers>
             <backupguardfree>
-                <class>BackupGuard_BackupGuard_Helper</class>
+                <class>BackupGuard_BackupGuardFree_Helper</class>
             </backupguardfree>
         </helpers>
     </global>

@@ -46,33 +46,38 @@ class SGBackupFiles implements SGArchiveDelegate
         SGBackupLog::writeAction('backup files', SG_BACKUP_LOG_POS_START);
 
         $excludeFilePaths = SGConfig::get('SG_BACKUP_FILE_PATHS_EXCLUDE');
-        $this->excludeFilePaths = explode(',', $excludeFilePaths);
+        if (!$excludeFilePaths)
+        {
+            $this->excludeFilePaths = array();
+        }
+        else
+        {
+            $this->excludeFilePaths = explode(',', $excludeFilePaths);
+        }
 
         $this->filePath = $filePath;
         $backupItems = SGConfig::get('SG_BACKUP_FILE_PATHS');
         $allItems = explode(',', $backupItems);
 
-        SGBackupLog::write('Backup files: '.$backupItems);
-
         $this->sgbp = new SGArchive($filePath, 'w');
+        $this->sgbp->setDelegate($this);
 
         if (!is_writable($filePath))
         {
             throw new SGExceptionForbidden('Could not create backup file: '.$filePath);
         }
 
+        SGBackupLog::write('Backup files: '.$backupItems);
+
         $this->resetBackupProgress($allItems);
         $this->warningsFound = false;
 
         SGBackupLog::write('Number of files to backup: '.$this->totalBackupFilesCount);
 
-        foreach ($allItems as $item)
-        {
+        foreach ($allItems as $item) {
             SGBackupLog::writeAction('backup file: '.$item, SG_BACKUP_LOG_POS_START);
-
             $path = $this->rootDirectory.$item;
             $this->addFileToArchive($path);
-
             SGBackupLog::writeAction('backup file: '.$item, SG_BACKUP_LOG_POS_END);
         }
 
@@ -89,7 +94,6 @@ class SGBackupFiles implements SGArchiveDelegate
 
         $this->resetRestoreProgress(dirname($filePath));
         $this->warningsFound = false;
-
         $this->extractArchive($filePath);
 
         SGBackupLog::writeAction('restore files', SG_BACKUP_LOG_POS_END);
@@ -107,7 +111,7 @@ class SGBackupFiles implements SGArchiveDelegate
     public function getCorrectCdrFilename($filename)
     {
         $backupsPath = $this->pathWithoutRootDirectory(realpath(SG_BACKUP_DIRECTORY));
-        
+
         if (strpos($filename, $backupsPath)===0)
         {
             $newPath = dirname($this->pathWithoutRootDirectory(realpath($this->filePath)));
@@ -160,7 +164,7 @@ class SGBackupFiles implements SGArchiveDelegate
         foreach ($allItems as $item)
         {
             $path = $this->rootDirectory.$item;
-            
+
             $count = 0;
             $this->numberOfFilesInDirectory($path, $count);
 
@@ -200,7 +204,7 @@ class SGBackupFiles implements SGArchiveDelegate
     private function numberOfFilesInDirectory($path, &$count = 0)
     {
         if ($this->shouldExcludeFile($path)) return;
-
+        SGPing::update();
         if (is_dir($path))
         {
             if ($handle = @opendir($path))
@@ -218,7 +222,12 @@ class SGBackupFiles implements SGArchiveDelegate
 
                     $this->numberOfFilesInDirectory($path.'/'.$file, $count);
                 }
+
                 closedir($handle);
+            }
+            else
+            {
+                $this->warn('Could not read directory (skipping): '.$path);
             }
         }
         else
@@ -237,7 +246,7 @@ class SGBackupFiles implements SGArchiveDelegate
 
     private function addFileToArchive($path)
     {
-        if ($this->shouldExcludeFile($path)) return;
+        if ($this->shouldExcludeFile($path)) return true;
 
         //check if it is a directory
         if (is_dir($path))
@@ -250,7 +259,7 @@ class SGBackupFiles implements SGArchiveDelegate
         if (is_readable($path))
         {
             $file = substr($path, strlen($this->rootDirectory));
-			$file = str_replace('\\', '/', $file);
+            $file = str_replace('\\', '/', $file);
             $this->sgbp->addFileFromPath($file, $path);
         }
         else
@@ -272,12 +281,8 @@ class SGBackupFiles implements SGArchiveDelegate
         {
             SGBackgroundMode::next();
         }
-    }
 
-    private function warn($message)
-    {
-        $this->warningsFound = true;
-        SGBackupLog::writeWarning($message);
+        return;
     }
 
     private function backupDirectory($path)
@@ -303,7 +308,7 @@ class SGBackupFiles implements SGArchiveDelegate
             if (!$filesFound)
             {
                 $file = substr($path, strlen($this->rootDirectory));
-				$file = str_replace('\\', '/', $file);
+                $file = str_replace('\\', '/', $file);
                 $this->sgbp->addFile($file.'/', ''); //create empty directory
             }
 
@@ -313,6 +318,12 @@ class SGBackupFiles implements SGArchiveDelegate
         {
             $this->warn('Could not read directory (skipping): '.$path);
         }
+    }
+
+    private function warn($message)
+    {
+        $this->warningsFound = true;
+        SGBackupLog::writeWarning($message);
     }
 
     private function updateProgress()

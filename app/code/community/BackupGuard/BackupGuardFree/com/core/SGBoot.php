@@ -1,19 +1,23 @@
 <?php
+require_once(SG_EXCEPTION_PATH.'SGException.php');
 require_once(SG_CORE_PATH.'functions.php');
+require_once(SG_CORE_PATH.'SGPing.php');
 require_once(SG_DATABASE_PATH.'SGDatabase.php');
-require_once(SG_EXCEPTION_PATH.'SGExceptionHandler.php');
 require_once(SG_CORE_PATH.'SGConfig.php');
 @include_once(SG_SCHEDULE_PATH.'SGSchedule.php');
 
 class SGBoot
 {
+    public static $executionTimeLimit = 0;
+
     public static function init()
     {
-        //remove execution time limit
-        set_time_limit(0);
+        //get current execution time limit
+        self::$executionTimeLimit = ini_get('max_execution_time');
 
-        //set default exception handler
-        SGExceptionHandler::init();
+        //remove execution time limit
+        @set_time_limit(0);
+
 
         //load all config variables from database
         SGConfig::getAll();
@@ -45,17 +49,17 @@ class SGBoot
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
             $res = $sgdb->query('CREATE TABLE `'.SG_CONFIG_TABLE_NAME.'` (
-                                  `ckey` varchar(255) NOT NULL,
+                                  `ckey` varchar(100) NOT NULL,
                                   `cvalue` varchar(255) NOT NULL,
                                   PRIMARY KEY (`ckey`)
-                                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;');
+                                );');
             if ($res===false)
             {
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
 
             //populate config table
-            $res = $sgdb->query("INSERT INTO `".SG_CONFIG_TABLE_NAME."` VALUES 
+            $res = $sgdb->query("INSERT INTO `".SG_CONFIG_TABLE_NAME."` VALUES
                                 ('SG_BACKUP_SYNCHRONOUS_STORAGE_UPLOAD','1'),
                                 ('SG_NOTIFICATIONS_ENABLED','0'),
                                 ('SG_NOTIFICATIONS_EMAIL_ADDRESS',''),
@@ -81,20 +85,11 @@ class SGBoot
                                   `start_date` datetime NOT NULL,
                                   `update_date` datetime DEFAULT NULL,
                                   PRIMARY KEY (`id`)
-                                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+                                );");
             if ($res===false)
             {
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
-
-            //try to create cron job for storage uploadings
-            /*if (self::isFeatureAvailable('SCHEDULE'))
-            {
-                if (SGSchedule::isCronAvailable() && SGSchedule::create(SG_STORAGE_UPLOAD_CRON))
-                {
-                    SGConfig::set('SG_BACKUP_SYNCHRONOUS_STORAGE_UPLOAD', 0);
-                }
-            }*/
         }
         catch (SGException $exception)
         {
@@ -182,7 +177,7 @@ class SGBoot
         //check PHP version
         if (version_compare(PHP_VERSION, '5.3.0', '<'))
         {
-            throw new SGExceptionNotFound('PHP >=5.3.0 version required.');
+			die('PHP >=5.3.0 version required.');
         }
 
         //check ZLib library

@@ -63,3 +63,11 @@ class SGExceptionSkip extends SGException
         parent::__construct($msg, 1, null);
     }
 }
+
+class SGExceptionExecutionTimeError extends SGException
+{
+    public function __construct($msg = 'Execution timeout error')
+    {
+        parent::__construct($msg, 1, null);
+    }
+}

@@ -23,6 +23,11 @@ class SGBackupDatabase implements SGIMysqldumpDelegate
         $this->delegate = $delegate;
     }
 
+    public function setFilePath($filePath)
+    {
+        $this->backupFilePath = $filePath;
+    }
+
     public function didFindWarnings()
     {
         return $this->warningsFound;
@@ -30,9 +35,12 @@ class SGBackupDatabase implements SGIMysqldumpDelegate
 
     public function backup($filePath)
     {
-        SGBackupLog::writeAction('backup database', SG_BACKUP_LOG_POS_START);
         $this->backupFilePath = $filePath;
+        $this->progressUpdateInterval = SGConfig::get('SG_ACTION_PROGRESS_UPDATE_INTERVAL');
+
+        SGBackupLog::writeAction('backup database', SG_BACKUP_LOG_POS_START);
         $this->resetBackupProgress();
+
         $this->export();
         SGBackupLog::writeAction('backup database', SG_BACKUP_LOG_POS_END);
     }
@@ -92,8 +100,9 @@ class SGBackupDatabase implements SGIMysqldumpDelegate
                 SGBackupLog::write('Importing table: '.$tableName);
             }
 
-            if ($trimmedRow && $trimmedRow[strlen($trimmedRow)-1]==';')
+            if($trimmedRow && substr($trimmedRow, -9) == "/*SGEnd*/")
             {
+                $importQuery = str_replace("/*SGEnd*/", "", $importQuery);
                 $res = $this->sgdb->exec($importQuery);
                 if ($res===false)
                 {
@@ -102,6 +111,7 @@ class SGBackupDatabase implements SGIMysqldumpDelegate
                 $importQuery = '';
             }
             $this->currentRowCount++;
+            SGPing::update();
             $this->updateProgress();
         }
         @fclose($fileHandle);
@@ -110,6 +120,7 @@ class SGBackupDatabase implements SGIMysqldumpDelegate
     public function didExportRow()
     {
         $this->currentRowCount++;
+        SGPing::update();
 
         if ($this->updateProgress())
         {
@@ -135,7 +146,6 @@ class SGBackupDatabase implements SGIMysqldumpDelegate
     {
         $this->totalRowCount = 0;
         $this->currentRowCount = 0;
-        $this->progressUpdateInterval = SGConfig::get('SG_ACTION_PROGRESS_UPDATE_INTERVAL');
         $tableNames = $this->getTables();
         foreach ($tableNames as $table)
         {
@@ -157,7 +167,7 @@ class SGBackupDatabase implements SGIMysqldumpDelegate
     private function getTables()
     {
         $tableNames = array();
-        $tables = $this->sgdb->query('SHOW TABLES FROM '.SG_DB_NAME);
+        $tables = $this->sgdb->query('SHOW TABLES FROM `'.SG_DB_NAME.'`');
         if (!$tables)
         {
             throw new SGExceptionDatabaseError('Could not get tables of database: '.SG_DB_NAME);

@@ -2,8 +2,10 @@
 $m = new Mage();
 $version = $m->getVersion();
 
+define('SG_ENV_WORDPRESS', 'Wordpress');
+define('SG_ENV_MAGENTO', 'Magento');
 define('SG_ENV_VERSION', $version);
-define('SG_ENV_ADAPTER', 'Magento');
+define('SG_ENV_ADAPTER', SG_ENV_MAGENTO);
 define('SG_ENV_DB_PREFIX', (string)Mage::getConfig()->getTablePrefix());
 
 require_once(dirname(__FILE__).'/config.php');
@@ -19,6 +21,7 @@ define('SG_MAIL_RESTORE_TEMPLATE', 'backupguard_restore');
 
 //Backup
 define('SG_APP_ROOT_DIRECTORY', Mage::getBaseDir().'/');
+
 $excludes = array(
 					'app/code/community/BackupGuard/',
 				  	'app/etc/modules/BackupGuard_BackupGuardFree.xml',
@@ -31,6 +34,7 @@ $excludes = array(
 				  	'app/locale/en_US/template/email/backupguard_backup_success.html',
 				  	'app/locale/en_US/template/email/backupguard_restore_fail.html',
 				  	'app/locale/en_US/template/email/backupguard_restore_success.html',
+					'media/sg_symlinks/',
 				  	'skin/adminhtml/base/default/css/BackupGuardFree/',
 				  	'skin/adminhtml/base/default/css/BackupGuard/',
 				  	'skin/adminhtml/base/default/js/BackupGuardFree/',
@@ -41,6 +45,11 @@ $excludes = array(
 				);
 define('SG_BACKUP_FILE_PATHS_EXCLUDE', implode(',', $excludes));
 define('SG_BACKUP_DIRECTORY', SG_APP_PATH.'../sg_backups/'); //backups will be stored here
+
+define('SG_PING_FILE_PATH', SG_BACKUP_DIRECTORY.'ping.json');
+
+define('SG_SYMLINK_URL', Mage::getBaseUrl('media').'sg_symlinks/');
+define('SG_SYMLINK_PATH', Mage::getBaseDir('media').'/sg_symlinks/');
 
 //Storage
 define('SG_STORAGE_UPLOAD_CRON', '');

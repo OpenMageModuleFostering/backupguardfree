@@ -14,8 +14,7 @@
 		<reference name="head">
 			<action method="addItem">
             	<type>skin_css</type>
-            	<name>css/BackupGuardFree/sgstyles.less</name>
-            	<params>id="less_inc"</params>
+            	<name>css/BackupGuardFree/bgstyle.less.css</name>
 			</action>
 			<action method="addItem">
             	<type>skin_css</type>

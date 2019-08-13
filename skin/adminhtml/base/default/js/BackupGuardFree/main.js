@@ -1,8 +1,15 @@
 sgBackup = {};
 sgBackup.isModalOpen = false;
 SG_CURRENT_ACTIVE_AJAX = '';
+SG_NOTICE_EXECUTION_TIMEOUT = 'timeoutError';
+
 jQuery(document).ready( function() {
     sgBackup.init();
+    jQuery('.dismiss-button').on('click', function(){
+        jQuery('#timeout-error-msg').hide();
+        var dismissHandler = new sgRequestHandler('hideNotice',{notice: SG_NOTICE_EXECUTION_TIMEOUT});
+        dismissHandler.run();
+    });
 });
 
 //SG init
@@ -106,9 +113,5 @@ sgBackup.hideAjaxSpinner = function(){
     jQuery('.sg-spinner').remove();
 };
 
-less.pageLoadFinished.then(
-    function() {
-        jQuery('#sg-wrapper').show();
-        jQuery('.sg-spinner').remove();
-    }
-);
+jQuery('#sg-wrapper').show();
+jQuery('.sg-spinner').remove();

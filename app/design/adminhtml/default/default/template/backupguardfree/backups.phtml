@@ -13,6 +13,7 @@
                 <thead>
                 <tr>
                     <th><?php _t('Filename')?></th>
+                    <th><?php _t('size')?></th>
                     <th><?php _t('Date')?></th>
                     <th><?php _t('Status')?></th>
                     <th><?php _t('Actions')?></th>
@@ -21,30 +22,41 @@
                 <tbody>
                 <?php if(empty($backups)):?>
                     <tr>
-                        <td colspan="4"><?php _t('No backups found.')?></td>
+                        <td colspan="5"><?php _t('No backups found.')?></td>
                     </tr>
                 <?php endif;?>
                 <?php foreach($backups as $backup): ?>
                     <tr>
                         <td><?php echo $backup['name'] ?></td>
+                        <td><?php echo $backup['size'] ?></td>
                         <td><?php echo $backup['date'] ?></td>
                         <td id="sg-status-tabe-data" <?php echo $backup['active']?'data-toggle="tooltip" data-placement="top" data-original-title="" data-container="#sg-wrapper"':''?>>
                         <?php if($backup['active']):
                             $activeOptions = json_decode(SGConfig::get('SG_ACTIVE_BACKUP_OPTIONS'), true);
                             $filteredStatuses = filterStatusesByActionType($backup, $activeOptions);
                         ?>
-                            <input type="hidden" id="sg-active-action-id" value="<?php echo $backup['id']?>"/>
-                            <?php foreach ($filteredStatuses as $statusCode): ?>
-                                <span class="btn-xs sg-status-icon sg-status-<?php echo $statusCode ?>">&nbsp;</span>
-                            <?php endforeach; ?>
+                            <input type="hidden" id="sg-active-action-id" value="<?php echo $backup['id']; ?>"/>
+                                <?php foreach ($filteredStatuses as $statusCode): ?>
+                                    <span class="btn-xs sg-status-icon sg-status-<?php echo $statusCode; ?>">&nbsp;</span>
+                                <?php endforeach; ?>
                                 <div class="progress sg-progress">
                                     <div class="progress-bar progress-bar-danger"></div>
                                 </div>
                         <?php else: ?>
-                            <?php if ($backup['backup_warning'] == 1 || $backup['restore_warning'] == 1): ?>
-                                <span class="glyphicon glyphicon-warning-sign btn-xs text-warning" data-toggle="tooltip" data-placement="top" data-original-title="<?php echo $backup['backup_warning']?_t('Warnings found during backup',true):_t('Warnings found during restore',true)?>" data-container="#sg-wrapper"></span>
-                            <?php elseif ($backup['backup_error'] == 1 || $backup['restore_error'] == 1): ?>
-                                <span class="glyphicon glyphicon-warning-sign btn-xs text-danger" data-toggle="tooltip" data-placement="top" data-original-title="<?php echo $backup['backup_error']?_t('Errors found during backup',true):_t('Errors found during restore',true)?>" data-container="#sg-wrapper"></span>
+                            <?php if ($backup['status'] == SG_ACTION_STATUS_FINISHED_WARNINGS): ?>
+                                <span class="glyphicon glyphicon-warning-sign btn-xs text-warning" data-toggle="tooltip" data-placement="top" data-original-title="<?php
+                                if($backup['type']==SG_ACTION_TYPE_BACKUP): echo _t('Warnings found during backup',true);
+                                    elseif($backup['type']==SG_ACTION_TYPE_RESTORE): echo _t('Warnings found during restore',true);
+                                    else: echo _t('Warnings found during upload',true);
+                                endif;
+                                    ?>" data-container="#sg-wrapper"></span>
+                            <?php elseif ($backup['status'] == SG_ACTION_STATUS_ERROR):  ?>
+                                <span class="glyphicon glyphicon-warning-sign btn-xs text-danger" data-toggle="tooltip" data-placement="top" data-original-title="<?php
+                                        if($backup['type']==SG_ACTION_TYPE_BACKUP): echo _t('Errors found during backup',true);
+                                        elseif($backup['type']==SG_ACTION_TYPE_RESTORE): echo _t('Errors found during restore',true);
+                                        else: echo _t('Errors found during upload',true);
+                                        endif;
+                                        ?>" data-container="#sg-wrapper"></span>
                             <?php else: ?>
                                 <span class="glyphicon glyphicon-ok btn-xs text-success"></span>
                             <?php endif;?>
@@ -63,30 +75,32 @@
                                     <ul class="dropdown-menu">
                                         <?php if($backup['files']):?>
                                             <li>
-                                                <a href="<?php echo SG_PUBLIC_AJAX_URL.'action/downloadBackup/?backupName='.$backup['name'].'&downloadType='.SG_BACKUP_DWONLOAD_TYPE_SGBP ?>">
+                                                <a href="<?php echo SG_PUBLIC_AJAX_URL.'action/downloadBackup/?backupName='.$backup['name'].'&downloadType='.SG_BACKUP_DOWNLOAD_TYPE_SGBP ?>">
                                                     <i class="glyphicon glyphicon-hdd" aria-hidden="true"></i> <?php _t('Backup')?>
                                                 </a>
                                             </li>
                                         <?php endif;?>
                                         <?php if($backup['backup_log']):?>
                                             <li>
-                                                <a href="<?php echo SG_PUBLIC_AJAX_URL.'action/downloadBackup/?backupName='.$backup['name'].'&downloadType='.SG_BACKUP_DWONLOAD_TYPE_BACKUP_LOG ?>">
+                                                <a href="<?php echo SG_PUBLIC_AJAX_URL.'action/downloadBackup/?backupName='.$backup['name'].'&downloadType='.SG_BACKUP_DOWNLOAD_TYPE_BACKUP_LOG ?>">
                                                     <i class="glyphicon glyphicon-list-alt" aria-hidden="true"></i> <?php _t('Backup log')?>
                                                 </a>
                                             </li>
                                         <?php endif;?>
                                         <?php if($backup['restore_log']):?>
                                             <li>
-                                                <a href="<?php echo SG_PUBLIC_AJAX_URL.'action/downloadBackup/?backupName='.$backup['name'].'&downloadType='.SG_BACKUP_DWONLOAD_TYPE_RESTORE_LOG ?>">
+                                                <a href="<?php echo SG_PUBLIC_AJAX_URL.'action/downloadBackup/?backupName='.$backup['name'].'&downloadType='.SG_BACKUP_DOWNLOAD_TYPE_RESTORE_LOG ?>">
                                                     <i class="glyphicon glyphicon-th-list" aria-hidden="true"></i> <?php _t('Restore log')?>
                                                 </a>
                                             </li>
                                         <?php endif;?>
                                     </ul>
                                 </div>
-                                <a href="javascript:void(0)" title="<?php _t('Restore')?>" class="btn btn-success btn-xs sg-restore" data-restore-name="<?php echo $backup['name']?>">
-                                    &nbsp;<i class="glyphicon glyphicon-repeat" aria-hidden="true"></i>&nbsp;
-                                </a>
+                                <?php if(file_exists(SG_BACKUP_DIRECTORY.$backup['name'].'/'.$backup['name'].'.sgbp')):?>
+                                    <a href="javascript:void(0)" title="<?php _t('Restore')?>" class="btn btn-success btn-xs sg-restore" data-restore-name="<?php echo $backup['name']?>">
+                                        &nbsp;<i class="glyphicon glyphicon-repeat" aria-hidden="true"></i>&nbsp;
+                                    </a>
+                                <?php endif;?>
                             <?php endif; ?>
                         </td>
                     </tr>

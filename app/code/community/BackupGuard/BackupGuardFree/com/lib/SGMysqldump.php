@@ -47,6 +47,7 @@ class SGMysqldump
     private $version;
     private $tableColumnTypes = array();
     private $delegate = null;
+    private $excludeTables = array();
 
     /**
      * Constructor of SGMysqldump. Note that in the case of an SQLite database
@@ -93,6 +94,7 @@ class SGMysqldump
         $this->dbHandler = $dbHandler;
         $this->dbType = strtolower($type);
         $this->dumpSettings = self::array_replace_recursive($dumpSettingsDefault, $dumpSettings);
+        $this->excludeTables = $dumpSettings['exclude-tables'];
 
         $diff = array_diff(array_keys($this->dumpSettings), array_keys($dumpSettingsDefault));
         if (count($diff)>0) {
@@ -323,11 +325,15 @@ class SGMysqldump
             if (in_array($table, $this->dumpSettings['exclude-tables'], true)) {
                 continue;
             }
+
             SGBackupLog::writeAction('backup table: '.$table, SG_BACKUP_LOG_POS_START);
+
             $this->getTableStructure($table);
+
             if (false === $this->dumpSettings['no-data']) {
                 $this->listValues($table);
             }
+
             SGBackupLog::writeAction('backup table: '.$table, SG_BACKUP_LOG_POS_END);
         }
     }
@@ -370,9 +376,9 @@ class SGMysqldump
      * @param string $tableName  Name of table to export
      * @return null
      */
-    private function getTableStructure($tableName)
+    private function getTableStructure($tableName, $skipCreate = false)
     {
-        if (!$this->dumpSettings['no-create-info']) {
+        if (!$skipCreate && !$this->dumpSettings['no-create-info']) {
             $ret = '';
             if (!$this->dumpSettings['skip-comments']) {
                 $ret = "--" . PHP_EOL .
@@ -511,6 +517,7 @@ class SGMysqldump
 
         $onlyOnce = true;
         $lineSize = 0;
+        $offset = 0;
 
         $colStmt = $this->getColumnStmt($tableName);
         $stmt = "SELECT $colStmt FROM `$tableName`";
@@ -519,7 +526,6 @@ class SGMysqldump
             $stmt .= " WHERE {$this->dumpSettings['where']}";
         }
 
-        $offset = 0;
         $limit = SG_BACKUP_DATABASE_INSERT_LIMIT;
 
         while (true) {
@@ -544,7 +550,7 @@ class SGMysqldump
                 }
                 if ($lineSize > self::MAXLINESIZE) {
                     $onlyOnce = true;
-                    $this->compressManager->write(";" . PHP_EOL);
+                    $this->compressManager->write(";/*SGEnd*/" . PHP_EOL);
                     $lineSize = 0;
                 }
 
@@ -560,7 +566,7 @@ class SGMysqldump
         }
 
         if (!$onlyOnce) {
-            $this->compressManager->write(";" . PHP_EOL);
+            $this->compressManager->write(";/*SGEnd*/" . PHP_EOL);
         }
 
         $this->endListValues($tableName);
@@ -734,7 +740,7 @@ class CompressBzip2 extends CompressManagerFactory
 
     public function open($filename)
     {
-        $this->fileHandler = bzopen($filename, "w");
+        $this->fileHandler = bzopen($filename, 'a');
         if (false === $this->fileHandler) {
             throw new Exception("Output file is not writable");
         }
@@ -769,7 +775,7 @@ class CompressGzip extends CompressManagerFactory
 
     public function open($filename)
     {
-        $this->fileHandler = gzopen($filename, "wb");
+        $this->fileHandler = gzopen($filename, "ab");
         if (false === $this->fileHandler) {
             throw new Exception("Output file is not writable");
         }
@@ -797,7 +803,7 @@ class CompressNone extends CompressManagerFactory
 
     public function open($filename)
     {
-        $this->fileHandler = fopen($filename, "wb");
+        $this->fileHandler = fopen($filename, "ab");
         if (false === $this->fileHandler) {
             throw new Exception("Output file is not writable");
         }
@@ -1110,8 +1116,8 @@ class TypeAdapterMysql extends TypeAdapterFactory
 
         $ret .= "CREATE DATABASE /*!32312 IF NOT EXISTS*/ `${databaseName}`".
             " /*!40100 DEFAULT CHARACTER SET ${characterSet} " .
-            " COLLATE ${collationDb} */;" . PHP_EOL . PHP_EOL .
-            "USE `${databaseName}`;" . PHP_EOL . PHP_EOL;
+            " COLLATE ${collationDb} */;/*SGEnd*/" . PHP_EOL . PHP_EOL .
+            "USE `${databaseName}`;/*SGEnd*/" . PHP_EOL . PHP_EOL;
 
         return $ret;
     }
@@ -1137,10 +1143,10 @@ class TypeAdapterMysql extends TypeAdapterFactory
             throw new Exception("Error getting table code, unknown output");
         }
 
-        $ret = "/*!40101 SET @saved_cs_client     = @@character_set_client */;" . PHP_EOL .
-            "/*!40101 SET character_set_client = " . $dumpSettings['default-character-set'] . " */;" . PHP_EOL .
-            $row['Create Table'] . ";" . PHP_EOL .
-            "/*!40101 SET character_set_client = @saved_cs_client */;" . PHP_EOL .
+        $ret = "/*!40101 SET @saved_cs_client     = @@character_set_client */;/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET character_set_client = " . $dumpSettings['default-character-set'] . " */;/*SGEnd*/" . PHP_EOL .
+            $row['Create Table'] . ";/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET character_set_client = @saved_cs_client */;/*SGEnd*/" . PHP_EOL .
             PHP_EOL;
         return $ret;
     }
@@ -1173,7 +1179,7 @@ class TypeAdapterMysql extends TypeAdapterFactory
             false === $triggerStmtReplaced3) {
             $triggerStmtReplaced = $triggerStmt;
         } else {
-            $triggerStmtReplaced = $triggerStmtReplaced3 . " */;";
+            $triggerStmtReplaced = $triggerStmtReplaced3 . " */;/*SGEnd*/";
         }
 
         $ret .= $triggerStmtReplaced . PHP_EOL . PHP_EOL;
@@ -1202,9 +1208,9 @@ class TypeAdapterMysql extends TypeAdapterFactory
             $triggerStmtReplaced = $triggerStmt;
         }
 
-        $ret .= "DELIMITER ;;" . PHP_EOL .
-            $triggerStmtReplaced . "*/;;" . PHP_EOL .
-            "DELIMITER ;" . PHP_EOL . PHP_EOL;
+        $ret .= "DELIMITER ;;/*SGEnd*/" . PHP_EOL .
+            $triggerStmtReplaced . "*/;;/*SGEnd*/" . PHP_EOL .
+            "DELIMITER ;/*SGEnd*/" . PHP_EOL . PHP_EOL;
         return $ret;
     }
 
@@ -1298,12 +1304,12 @@ class TypeAdapterMysql extends TypeAdapterFactory
 
         $args = func_get_args();
 
-        return "LOCK TABLES `${args[0]}` WRITE;" . PHP_EOL;
+        return "LOCK TABLES `${args[0]}` WRITE;/*SGEnd*/" . PHP_EOL;
     }
 
     public function end_add_lock_table()
     {
-        return "UNLOCK TABLES;" . PHP_EOL;
+        return "UNLOCK TABLES;/*SGEnd*/" . PHP_EOL;
     }
 
     public function start_add_disable_keys()
@@ -1312,7 +1318,7 @@ class TypeAdapterMysql extends TypeAdapterFactory
             return "";
         }
         $args = func_get_args();
-        return "/*!40000 ALTER TABLE `${args[0]}` DISABLE KEYS */;" .
+        return "/*!40000 ALTER TABLE `${args[0]}` DISABLE KEYS */;/*SGEnd*/" .
             PHP_EOL;
     }
 
@@ -1322,18 +1328,18 @@ class TypeAdapterMysql extends TypeAdapterFactory
             return "";
         }
         $args = func_get_args();
-        return "/*!40000 ALTER TABLE `${args[0]}` ENABLE KEYS */;" .
+        return "/*!40000 ALTER TABLE `${args[0]}` ENABLE KEYS */;/*SGEnd*/" .
             PHP_EOL;
     }
 
     public function start_disable_autocommit()
     {
-        return "SET autocommit=0;" . PHP_EOL;
+        return "SET autocommit=0;/*SGEnd*/" . PHP_EOL;
     }
 
     public function end_disable_autocommit()
     {
-        return "COMMIT;" . PHP_EOL;
+        return "COMMIT;/*SGEnd*/" . PHP_EOL;
     }
 
     public function add_drop_database()
@@ -1344,7 +1350,7 @@ class TypeAdapterMysql extends TypeAdapterFactory
 
         $args = func_get_args();
 
-        return "/*!40000 DROP DATABASE IF EXISTS `${args[0]}`*/;" .
+        return "/*!40000 DROP DATABASE IF EXISTS `${args[0]}`*/;/*SGEnd*/" .
             PHP_EOL . PHP_EOL;
     }
 
@@ -1356,7 +1362,7 @@ class TypeAdapterMysql extends TypeAdapterFactory
 
         $args = func_get_args();
 
-        return "DROP TRIGGER IF EXISTS `${args[0]}`;" . PHP_EOL;
+        return "DROP TRIGGER IF EXISTS `${args[0]}`;/*SGEnd*/" . PHP_EOL;
     }
 
     public function drop_table()
@@ -1367,7 +1373,7 @@ class TypeAdapterMysql extends TypeAdapterFactory
 
         $args = func_get_args();
 
-        return "DROP TABLE IF EXISTS `${args[0]}`;" . PHP_EOL;
+        return "DROP TABLE IF EXISTS `${args[0]}`;/*SGEnd*/" . PHP_EOL;
     }
 
     public function drop_view()
@@ -1378,8 +1384,8 @@ class TypeAdapterMysql extends TypeAdapterFactory
 
         $args = func_get_args();
 
-        return "DROP TABLE IF EXISTS `${args[0]}`;" . PHP_EOL .
-                "/*!50001 DROP VIEW IF EXISTS `${args[0]}`*/;" . PHP_EOL;
+        return "DROP TABLE IF EXISTS `${args[0]}`;/*SGEnd*/" . PHP_EOL .
+                "/*!50001 DROP VIEW IF EXISTS `${args[0]}`*/;/*SGEnd*/" . PHP_EOL;
     }
 
     public function getDatabaseHeader()
@@ -1431,20 +1437,20 @@ class TypeAdapterMysql extends TypeAdapterFactory
 
         $args = func_get_args();
         $dumpSettings = $args[0];
-        $ret = "/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;" . PHP_EOL .
-            "/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;" . PHP_EOL .
-            "/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;" . PHP_EOL .
-            "/*!40101 SET NAMES " . $dumpSettings['default-character-set'] . " */;" . PHP_EOL;
+        $ret = "/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET NAMES " . $dumpSettings['default-character-set'] . " */;/*SGEnd*/" . PHP_EOL;
 
         if (false === $dumpSettings['skip-tz-utz']) {
-            $ret .= "/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;" . PHP_EOL .
-                "/*!40103 SET TIME_ZONE='+00:00' */;" . PHP_EOL;
+            $ret .= "/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;/*SGEnd*/" . PHP_EOL .
+                "/*!40103 SET TIME_ZONE='+00:00' */;/*SGEnd*/" . PHP_EOL;
         }
 
-        $ret .= "/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;" . PHP_EOL .
-            "/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;" . PHP_EOL .
-            "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;" . PHP_EOL .
-            "/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;" . PHP_EOL .PHP_EOL;
+        $ret .= "/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;/*SGEnd*/" . PHP_EOL .
+            "/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;/*SGEnd*/" . PHP_EOL .
+            "/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;/*SGEnd*/" . PHP_EOL .PHP_EOL;
 
         return $ret;
     }
@@ -1460,16 +1466,16 @@ class TypeAdapterMysql extends TypeAdapterFactory
         $ret = "";
 
         if (false === $dumpSettings['skip-tz-utz']) {
-            $ret .= "/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;" . PHP_EOL;
+            $ret .= "/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;/*SGEnd*/" . PHP_EOL;
         }
 
-        $ret .= "/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;" . PHP_EOL .
-            "/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;" . PHP_EOL .
-            "/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;" . PHP_EOL .
-            "/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;" . PHP_EOL .
-            "/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;" . PHP_EOL .
-            "/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;" . PHP_EOL .
-            "/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;" . PHP_EOL . PHP_EOL;
+        $ret .= "/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;/*SGEnd*/" . PHP_EOL .
+            "/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;/*SGEnd*/" . PHP_EOL .
+            "/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;/*SGEnd*/" . PHP_EOL .
+            "/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;/*SGEnd*/" . PHP_EOL .
+            "/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;/*SGEnd*/" . PHP_EOL . PHP_EOL;
 
         return $ret;
     }

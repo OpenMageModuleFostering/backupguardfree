@@ -41,22 +41,19 @@ class SGBackupFiles implements SGArchiveDelegate
         return $this->warningsFound;
     }
 
-    public function backup($filePath)
+    public function backup($filePath, $options)
     {
         SGBackupLog::writeAction('backup files', SG_BACKUP_LOG_POS_START);
 
-        $excludeFilePaths = SGConfig::get('SG_BACKUP_FILE_PATHS_EXCLUDE');
-        if (!$excludeFilePaths)
-        {
-            $this->excludeFilePaths = array();
+        if (strlen($options['SG_BACKUP_FILE_PATHS_EXCLUDE'])) {
+            $this->excludeFilePaths = explode(',', $options['SG_BACKUP_FILE_PATHS_EXCLUDE']);
         }
-        else
-        {
-            $this->excludeFilePaths = explode(',', $excludeFilePaths);
+        else{
+            $this->excludeFilePaths = array();
         }
 
         $this->filePath = $filePath;
-        $backupItems = SGConfig::get('SG_BACKUP_FILE_PATHS');
+        $backupItems = $options['SG_BACKUP_FILE_PATHS'];
         $allItems = explode(',', $backupItems);
 
         $this->sgbp = new SGArchive($filePath, 'w');
@@ -241,7 +238,12 @@ class SGBackupFiles implements SGArchiveDelegate
 
     public function cancel()
     {
-        @unlink($this->filePath);
+        $pathinfo = pathinfo($this->filePath);
+        $dir = SG_BACKUP_DIRECTORY.$pathinfo['filename'];
+
+        if ($dir != SG_BACKUP_DIRECTORY) {
+            deleteDirectory($dir);
+        }
     }
 
     private function addFileToArchive($path)

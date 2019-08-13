@@ -4,7 +4,7 @@ require_once(SG_CORE_PATH.'functions.php');
 require_once(SG_CORE_PATH.'SGPing.php');
 require_once(SG_DATABASE_PATH.'SGDatabase.php');
 require_once(SG_CORE_PATH.'SGConfig.php');
-@include_once(SG_SCHEDULE_PATH.'SGSchedule.php');
+@include_once(SG_BACKUP_PATH.'SGBackupSchedule.php');
 
 class SGBoot
 {
@@ -17,7 +17,6 @@ class SGBoot
 
         //remove execution time limit
         @set_time_limit(0);
-
 
         //load all config variables from database
         SGConfig::getAll();
@@ -38,41 +37,55 @@ class SGBoot
 
     public static function install()
     {
-        try
-        {
-            $sgdb = SGDatabase::getInstance();
+        $sgdb = SGDatabase::getInstance();
 
+        try {
             //create config table
             $res = $sgdb->query('DROP TABLE IF EXISTS `'.SG_CONFIG_TABLE_NAME.'`;');
-            if ($res===false)
-            {
+            if ($res===false) {
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
+
             $res = $sgdb->query('CREATE TABLE `'.SG_CONFIG_TABLE_NAME.'` (
                                   `ckey` varchar(100) NOT NULL,
-                                  `cvalue` varchar(255) NOT NULL,
+                                  `cvalue` text NOT NULL,
                                   PRIMARY KEY (`ckey`)
                                 );');
-            if ($res===false)
-            {
+            if ($res===false) {
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
 
             //populate config table
             $res = $sgdb->query("INSERT INTO `".SG_CONFIG_TABLE_NAME."` VALUES
+                                ('SG_BACKUP_GUARD_VERSION','".SG_BACKUP_GUARD_VERSION."'),
                                 ('SG_BACKUP_SYNCHRONOUS_STORAGE_UPLOAD','1'),
                                 ('SG_NOTIFICATIONS_ENABLED','0'),
                                 ('SG_NOTIFICATIONS_EMAIL_ADDRESS',''),
                                 ('SG_STORAGE_BACKUPS_FOLDER_NAME','sg_backups');");
-            if ($res===false)
-            {
+            if ($res===false) {
+                throw new SGExceptionDatabaseError('Could not execute query');
+            }
+
+            //create schedule table
+            $res = $sgdb->query('DROP TABLE IF EXISTS `'.SG_SCHEDULE_TABLE_NAME.'`;');
+            if ($res===false) {
+                throw new SGExceptionDatabaseError('Could not execute query');
+            }
+            $res = $sgdb->query('CREATE TABLE `'.SG_SCHEDULE_TABLE_NAME.'` (
+                                  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+                                  `label` varchar(255) NOT NULL,
+                                  `status` tinyint(3) unsigned NOT NULL,
+                                  `schedule_options` varchar(255) NOT NULL,
+                                  `backup_options` text NOT NULL,
+                                  PRIMARY KEY (`id`)
+                                );');
+            if ($res===false) {
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
 
             //create action table
             $res = $sgdb->query('DROP TABLE IF EXISTS `'.SG_ACTION_TABLE_NAME.'`;');
-            if ($res===false)
-            {
+            if ($res===false) {
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
             $res = $sgdb->query("CREATE TABLE `".SG_ACTION_TABLE_NAME."` (
@@ -84,16 +97,23 @@ class SGBoot
                                   `progress` tinyint(3) unsigned NOT NULL DEFAULT '0',
                                   `start_date` datetime NOT NULL,
                                   `update_date` datetime DEFAULT NULL,
+                                  `options` text NOT NULL,
                                   PRIMARY KEY (`id`)
                                 );");
-            if ($res===false)
-            {
+            if ($res===false) {
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
         }
-        catch (SGException $exception)
-        {
+        catch (SGException $exception) {
             die($exception);
+        }
+    }
+
+    private static function cleanupSchedules()
+    {
+        $schedules = SGBackupSchedule::getAllSchedules();
+        foreach ($schedules as $schedule) {
+            SGBackupSchedule::remove($schedule['id']);
         }
     }
 
@@ -101,12 +121,25 @@ class SGBoot
     {
         try
         {
+            @unlink(SG_PING_FILE_PATH);
+
+            if(self::isFeatureAvailable('SCHEDULE')) {
+                self::cleanupSchedules();
+            }
+
+
             $sgdb = SGDatabase::getInstance();
 
             //drop config table
             $res = $sgdb->query('DROP TABLE IF EXISTS `'.SG_CONFIG_TABLE_NAME.'`;');
             if ($res===false)
             {
+                throw new SGExceptionDatabaseError('Could not execute query');
+            }
+
+            //drop schedule table
+            $res = $sgdb->query('DROP TABLE IF EXISTS `'.SG_SCHEDULE_TABLE_NAME.'`;');
+            if ($res===false) {
                 throw new SGExceptionDatabaseError('Could not execute query');
             }
 
@@ -175,9 +208,9 @@ class SGBoot
     private static function checkMinimumRequirements()
     {
         //check PHP version
-        if (version_compare(PHP_VERSION, '5.3.0', '<'))
+        if (version_compare(PHP_VERSION, '5.3.3', '<'))
         {
-			die('PHP >=5.3.0 version required.');
+			die('PHP >=5.3.3 version required.');
         }
 
         //check ZLib library

@@ -1,3 +1,47 @@
+#modal-import-1,
+#sg-modal-inport-from,
+#modal-import-3 {
+  padding: 0;
+}
+
+#sg-checkbox-select-all {
+  margin-top: 0;
+}
+
+.sg-wrap-container {
+  height: 553px;
+  width: 100%;
+}
+
+#sg-backup-guard-iframe {
+  width: 100%;
+  height: 100%;
+}
+
+#modal-import-2 {
+  margin-top: 15px;
+}
+
+#modal-import-1 .form-group{
+  margin-bottom: 0;
+}
+
+#modal-import-1 .table{
+  margin-bottom: 0;
+}
+
+#modal-import-3 .form-group{
+  margin-bottom: 0;
+}
+
+#modal-import-3 .table{
+  margin-bottom: 0;
+}
+
+.file-select-radio {
+  padding-left: 15px !important;
+}
+
 .sg-wrapper-less {
   /* vietnamese */
   /* latin-ext */
@@ -6951,7 +6995,7 @@
   width: calc(100% - 210px);
   /*Same as sidebar*/
   border-left: 1px #333333 solid;
-  min-height: 450px;
+  min-height: 540px;
   background-color: #ffffff;
 }
 .sg-wrapper-less #sg-content-wrapper .container-fluid {
@@ -7422,6 +7466,12 @@
   .sg-wrapper-less .sg-status-icon {
     background-image: url('../../media/BackupGuardFree/img/backup-icons@2x.png');
   }
+}
+.sg-wrapper-less .sg-status-34 {
+  background-position: -80px -20px;
+}
+.sg-wrapper-less .sg-status-34.active {
+  background-position: -80px 0px;
 }
 .sg-wrapper-less .sg-status-1 {
   background-position: -20px -20px;

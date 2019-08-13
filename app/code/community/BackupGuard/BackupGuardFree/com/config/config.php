@@ -23,6 +23,14 @@ define('SG_LOG_LEVEL_LOW', 4);
 define('SG_BACKUP_LOG_POS_START', 1);
 define('SG_BACKUP_LOG_POS_END', 2);
 
+define('SG_DB_PREFIX_REPLACEMENT', '%%sg_db_prefix%%');
+
+define('SG_SHCEDULE_STATUS_INACTIVE', 0);
+define('SG_SHCEDULE_STATUS_PENDING', 1);
+
+//Number of backups to keep on server by default
+define('SG_NUMBER_OF_BACKUPS_TO_KEEP', 100);
+
 //Backup timeout in seconds
 define('SG_BACKUP_TIMEOUT', 180);
 
@@ -33,6 +41,23 @@ define('SG_PING_DATE_UPDATE_FREQUENCY', 3);
 define('SGBP_EXT', 'sgbp');
 
 define('SG_NOTICE_EXECUTION_TIMEOUT', 'timeoutError');
+
+define('SG_WORDPRESS_CORE_TABLE', SG_ENV_DB_PREFIX.'options');
+define('SG_MAGENTO_CORE_TABLE', SG_ENV_DB_PREFIX.'core_config_data');
+
+//Backup file default prefix
+define('SG_BACKUP_FILE_NAME_DEFAULT_PREFIX', 'sg_backup_');
+
+//Default folder name for storage upload
+define('SG_BACKUP_DEFAULT_FOLDER_NAME', 'sg_backups');
+
+//Schedule action name prefix
+define('SG_SCHEDULE_ACTION', 'backup_guard_schedule_action');
+
+define('SG_SCHEDULER_DEFAULT_ID', 1);
+
+//one day in seconds
+define('SG_ONE_DAY_IN_SECONDS', 24*60*60);
 
 //Backup
 define('SG_ACTION_STATUS_CREATED', 0);
@@ -62,6 +87,8 @@ define('SG_MAIL_RESTORE_FAIL_SUBJECT', 'Restore Failed');
 define('SG_STORAGE_FTP', 1);
 define('SG_STORAGE_DROPBOX', 2);
 define('SG_STORAGE_GOOGLE_DRIVE', 3);
+define('SG_STORAGE_AMAZON', 4);
+
 define('SG_STORAGE_GOOGLE_DRIVE_CLIENT_ID', '1030123017859-vfdlqkjhiuuu5n36pbov93v9ruo6jpj5.apps.googleusercontent.com');
 define('SG_STORAGE_GOOGLE_DRIVE_SECRET', 'oUcZwC17q5ZSbYahnQkGYpyH');
 define('SG_STORAGE_GOOGLE_DRIVE_REDIRECT_URI', 'https://backup-guard.com/gdrive/');
@@ -79,3 +106,4 @@ define('SG_BACKUP_UPLOAD_TO_STORAGES', ''); //list of storage ids separated by c
 //Database tables
 define('SG_ACTION_TABLE_NAME', SG_ENV_DB_PREFIX.'sg_action');
 define('SG_CONFIG_TABLE_NAME', SG_ENV_DB_PREFIX.'sg_config');
+define('SG_SCHEDULE_TABLE_NAME', SG_ENV_DB_PREFIX.'sg_schedule');

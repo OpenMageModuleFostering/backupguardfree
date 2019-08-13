@@ -12,8 +12,9 @@
             <table class="table table-striped paginated sg-backup-table">
                 <thead>
                 <tr>
+                    <th><input type="checkbox" id="sg-checkbox-select-all" autocomplete="off"></th>
                     <th><?php _t('Filename')?></th>
-                    <th><?php _t('size')?></th>
+                    <th><?php _t('Size')?></th>
                     <th><?php _t('Date')?></th>
                     <th><?php _t('Status')?></th>
                     <th><?php _t('Actions')?></th>
@@ -22,49 +23,42 @@
                 <tbody>
                 <?php if(empty($backups)):?>
                     <tr>
-                        <td colspan="5"><?php _t('No backups found.')?></td>
+                        <td colspan="6"><?php _t('No backups found.')?></td>
                     </tr>
                 <?php endif;?>
                 <?php foreach($backups as $backup): ?>
                     <tr>
+                        <td> <input type="checkbox" autocomplete="off" value="<?php echo $backup['name']?>" <?php echo $backup['active']?'disabled':''?>> </td>
                         <td><?php echo $backup['name'] ?></td>
-                        <td><?php echo $backup['size'] ?></td>
+                        <td><?php echo !$backup['active']?$backup['size']:'' ?></td>
                         <td><?php echo $backup['date'] ?></td>
-                        <td id="sg-status-tabe-data" <?php echo $backup['active']?'data-toggle="tooltip" data-placement="top" data-original-title="" data-container="#sg-wrapper"':''?>>
-                        <?php if($backup['active']):
-                            $activeOptions = json_decode(SGConfig::get('SG_ACTIVE_BACKUP_OPTIONS'), true);
-                            $filteredStatuses = filterStatusesByActionType($backup, $activeOptions);
-                        ?>
-                            <input type="hidden" id="sg-active-action-id" value="<?php echo $backup['id']; ?>"/>
-                                <?php foreach ($filteredStatuses as $statusCode): ?>
-                                    <span class="btn-xs sg-status-icon sg-status-<?php echo $statusCode; ?>">&nbsp;</span>
-                                <?php endforeach; ?>
-                                <div class="progress sg-progress">
-                                    <div class="progress-bar progress-bar-danger"></div>
-                                </div>
-                        <?php else: ?>
-                            <?php if ($backup['status'] == SG_ACTION_STATUS_FINISHED_WARNINGS): ?>
-                                <span class="glyphicon glyphicon-warning-sign btn-xs text-warning" data-toggle="tooltip" data-placement="top" data-original-title="<?php
-                                if($backup['type']==SG_ACTION_TYPE_BACKUP): echo _t('Warnings found during backup',true);
-                                    elseif($backup['type']==SG_ACTION_TYPE_RESTORE): echo _t('Warnings found during restore',true);
-                                    else: echo _t('Warnings found during upload',true);
-                                endif;
-                                    ?>" data-container="#sg-wrapper"></span>
-                            <?php elseif ($backup['status'] == SG_ACTION_STATUS_ERROR):  ?>
-                                <span class="glyphicon glyphicon-warning-sign btn-xs text-danger" data-toggle="tooltip" data-placement="top" data-original-title="<?php
-                                        if($backup['type']==SG_ACTION_TYPE_BACKUP): echo _t('Errors found during backup',true);
-                                        elseif($backup['type']==SG_ACTION_TYPE_RESTORE): echo _t('Errors found during restore',true);
-                                        else: echo _t('Errors found during upload',true);
-                                        endif;
-                                        ?>" data-container="#sg-wrapper"></span>
+                        <td id="sg-status-tabe-data-<?php echo $backup['id']?>" <?php echo $backup['active']?'data-toggle="tooltip" data-placement="top" data-original-title="" data-container="#sg-wrapper"':''?>>
+                            <?php if($backup['active']):
+                                    $filteredStatuses = filterStatusesByActionType($backup, $backup['options']);
+                            ?>
+                                    <input type="hidden" class="sg-active-action-id" value="<?php echo $backup['id'];?>"/>
+                                    <?php foreach ($filteredStatuses as $statusCode): ?>
+                                        <span class="btn-xs sg-status-icon sg-status-<?php echo $statusCode; ?>">&nbsp;</span>
+                                    <?php endforeach; ?>
+                                    <div class="sg-progress progress">
+                                        <div class="progress-bar progress-bar-danger"></div>
+                                    </div>
                             <?php else: ?>
-                                <span class="glyphicon glyphicon-ok btn-xs text-success"></span>
-                            <?php endif;?>
-                        <?php endif; ?>
+                                    <?php if ($backup['status'] == SG_ACTION_STATUS_FINISHED_WARNINGS): ?>
+                                        <span class="glyphicon glyphicon-warning-sign btn-xs text-warning" data-toggle="tooltip" data-placement="top" data-original-title="<?php if($backup['type']==SG_ACTION_TYPE_BACKUP): echo _t('Warnings found during backup',true); elseif($backup['type']==SG_ACTION_TYPE_RESTORE): echo _t('Warnings found during restore',true); else: echo _t('Warnings found during upload',true); endif; ?>" data-container="#sg-wrapper"></span>
+                                    <?php elseif ($backup['status'] == SG_ACTION_STATUS_ERROR): ?>
+                                        <span class="glyphicon glyphicon-warning-sign btn-xs text-danger" data-toggle="tooltip" data-placement="top" data-original-title="<?php if($backup['type']==SG_ACTION_TYPE_BACKUP): echo _t('Errors found during backup',true); elseif($backup['type']==SG_ACTION_TYPE_RESTORE): echo _t('Errors found during restore',true); else: echo _t('Errors found during upload',true);
+                                        endif; ?>" data-container="#sg-wrapper"></span>
+                                    <?php else: ?>
+                                        <span class="glyphicon glyphicon-ok btn-xs text-success"></span>
+                                    <?php endif;?>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?php if($backup['active']): ?>
-                                <a class="btn btn-danger btn-xs sg-cancel-backup" href="javascript:void(0)" title="<?php _t('Stop')?>">&nbsp;<i class="glyphicon glyphicon-stop" aria-hidden="true"></i>&nbsp;</a>
+                                <?php if($backup['type'] != SG_ACTION_TYPE_RESTORE): ?>
+                                <a class="btn btn-danger btn-xs sg-cancel-backup" sg-data-backup-id="<?php echo $backup['id']?>" href="javascript:void(0)" title="<?php _t('Stop')?>">&nbsp;<i class="glyphicon glyphicon-stop" aria-hidden="true"></i>&nbsp;</a>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <a href="javascript:void(0)" data-sgbackup-name="<?php echo $backup['name'];?>" data-remote="deleteBackup" class="btn btn-danger btn-xs sg-remove-backup" title="<?php _t('Delete')?>">&nbsp;<i class="glyphicon glyphicon-remove" aria-hidden="true"></i>&nbsp;</a>
                                 <div class="btn-group">
@@ -107,6 +101,9 @@
                 <?php endforeach; ?>
                 </tbody>
             </table>
+
+            <button id="sg-delete-multi-backups" class="pull-left btn btn-danger"><?php _t('Delete')?></button>
+
             <div class="text-right">
                 <ul class="pagination"></ul>
             </div>

@@ -17,6 +17,24 @@ class BackupGuard_BackupGuardFree_Adminhtml_BackupguardfreeController extends Ma
         $this->renderLayout();
     }
 
+    public function settingsAction()
+    {
+        $this->_initAction();
+        $this->renderLayout();
+    }
+
+    public function supportAction()
+    {
+        $this->_initAction();
+        $this->renderLayout();
+    }
+
+    public function whyupgradeAction()
+    {
+        $this->_initAction();
+        $this->renderLayout();
+    }
+
     public function ajaxAction()
     {
         $params = $this->getRequest()->getParams();

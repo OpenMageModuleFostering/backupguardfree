@@ -11,6 +11,21 @@
                     <action>adminhtml/backupguardfree/backups</action>
                     <sort_order>0</sort_order>
                 </backups>
+                <settings module="backupguardfree">
+                    <title>Settings</title>
+                    <action>adminhtml/backupguardfree/settings</action>
+                    <sort_order>1</sort_order>
+                </settings>
+                <support module="backupguardfree">
+                    <title>Support</title>
+                    <action>adminhtml/backupguardfree/support</action>
+                    <sort_order>2</sort_order>
+                </support>
+                <whyupgrade module="backupguardfree">
+                    <title>Why upgrade?</title>
+                    <action>adminhtml/backupguardfree/whyupgrade</action>
+                    <sort_order>3</sort_order>
+                </whyupgrade>
             </children>
         </backupguardfree>
     </menu>

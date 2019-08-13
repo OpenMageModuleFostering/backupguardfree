@@ -110,6 +110,11 @@ class SGMysqldump
         $this->delegate = $delegate;
     }
 
+    public function setReplacements($replacements)
+    {
+        $this->compressManager->setReplacements($replacements);
+    }
+
     /**
      * Custom array_replace_recursive to be used if PHP < 5.3
      * Replaces elements from passed arrays into the first array recursively
@@ -498,7 +503,9 @@ class SGMysqldump
             } elseif ($columnTypes[$colName]['is_numeric']) {
                 $ret[] = $colValue;
             } else {
-                $ret[] = "'".str_replace("'", "''", $colValue)."'";
+                $str = "'".str_replace("'", "''", $colValue)."'";
+                $str = str_replace("\\", "\\\\", $str);
+                $ret[] = $str;
             }
         }
         return $ret;
@@ -710,6 +717,7 @@ abstract class CompressMethod
 
 abstract class CompressManagerFactory
 {
+    private static $replacements = array();
     /**
      * @param string $c
      * @return CompressBzip2|CompressGzip|CompressNone
@@ -724,6 +732,19 @@ abstract class CompressManagerFactory
         $method =  __NAMESPACE__ . "\\" . "Compress" . $c;
 
         return new $method;
+    }
+
+    public function setReplacements($replacements)
+    {
+        //Make sure param is valid assoc array
+        if (is_array($replacements)) {
+            self::$replacements = $replacements;
+        }
+    }
+
+    public static function prepareToWrite($str)
+    {
+        return processReplacements($str, self::$replacements);
     }
 }
 
@@ -750,6 +771,8 @@ class CompressBzip2 extends CompressManagerFactory
 
     public function write($str)
     {
+        //$str = self::prepareToWrite($str);
+
         if (false === ($bytesWritten = bzwrite($this->fileHandler, $str))) {
             throw new Exception("Writting to file failed! Probably, there is no more free space left?");
         }
@@ -785,6 +808,7 @@ class CompressGzip extends CompressManagerFactory
 
     public function write($str)
     {
+        $str = self::prepareToWrite($str);
         if (false === ($bytesWritten = gzwrite($this->fileHandler, $str))) {
             throw new Exception("Writting to file failed! Probably, there is no more free space left?");
         }
@@ -813,6 +837,7 @@ class CompressNone extends CompressManagerFactory
 
     public function write($str)
     {
+        $str = self::prepareToWrite($str);
         if (false === ($bytesWritten = fwrite($this->fileHandler, $str))) {
             throw new Exception("Writting to file failed! Probably, there is no more free space left?");
         }

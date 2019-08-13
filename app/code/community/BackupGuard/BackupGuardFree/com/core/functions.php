@@ -1,4 +1,67 @@
 <?php
+
+function backupGuardOutdatedBackupsCleanup($path)
+{
+	if (SGBoot::isFeatureAvailable('NUMBER_OF_BACKUPS_TO_KEEP')) {
+		$amountOfBackupsToKeep = SGConfig::get('SG_AMOUNT_OF_BACKUPS_TO_KEEP')?SGConfig::get('SG_AMOUNT_OF_BACKUPS_TO_KEEP'):SG_NUMBER_OF_BACKUPS_TO_KEEP;
+		$backups = backupGuardScanBackupsDirectory($path);
+		while (count($backups) > $amountOfBackupsToKeep) {
+			$backup = key($backups);
+			array_shift($backups);
+			deleteDirectory($path.$backup);
+		}
+	}
+}
+
+function backupGuardScanBackupsDirectory($path)
+{
+	$backups = scandir($path);
+	$backupFolders = array();
+	foreach ($backups as $key => $backup) {
+		if ($backup == "." || $backup == "..") {
+			continue;
+		}
+
+		if (is_dir($path.$backup)) {
+			$backupFolders[$backup] = filemtime($path.$backup);
+		}
+	}
+	// Sort(from low to high) backups by creation date
+	asort($backupFolders);
+	return $backupFolders;
+}
+
+function backupGuardSymlinksCleanup($dir)
+{
+	if (is_dir($dir)) {
+		$objects = scandir($dir);
+		foreach ($objects as $object) {
+			if ($object == "." || $object == "..") {
+				continue;
+			}
+
+			if (filetype($dir.$object) != "dir") {
+				@unlink($dir.$object);
+			}
+			else {
+				backupGuardSymlinksCleanup($dir.$object.'/');
+				@rmdir($dir.$object);
+			}
+		}
+	}
+	else {
+		@unlink($dir);
+	}
+	return;
+}
+
+function processReplacements($str, $replacements)
+{
+    foreach ($replacements as $find => $replace) {
+        return str_replace($find, $replace, $str);
+    }
+}
+
 function realFilesize($filename)
 {
 	$fp = fopen($filename, 'r');
@@ -139,7 +202,19 @@ function downloadFileSymlink($safedir, $filename)
 	closedir($handle);
 
 	mkdir($downloaddir . $string, 0777);
-	symlink($safedir . $filename, $downloaddir . $string . "/" . $filename);
-	header("Location: " . $downloadURL . $string . "/" . $filename);
+	$res = @symlink($safedir . $filename, $downloaddir . $string . "/" . $filename);
+	if ($res) {
+		header('Content-Type: application/octet-stream');
+		header('Content-Disposition: attachment;filename='.$filename);
+		header("Location: " . $downloadURL . $string . "/" . $filename);
+	}
+	else{
+		if(SG_ENV_ADAPTER == SG_ENV_WORDPRESS) {
+			wp_die('Symlink / shortcut creation failed! Seems your server configurations don’t allow symlink creation, so we’re unable to provide you the direct download url. You can download your backup using any FTP client. All backups and related stuff we locate “/wp-content/uploads/backup-guard” directory. If you need this functionality, you should check out your server configurations and make sure you don’t have any limitation related to symlink creation.');
+		}
+		elseif (SG_ENV_ADAPTER == SG_ENV_MAGENTO) {
+			die('Symlink / shortcut creation failed! Seems your server configurations don’t allow symlink creation, so we’re unable to provide you the direct download url. You can download your backup using any FTP client. All backups and related stuff we locate “/wp-content/uploads/backup-guard” directory. If you need this functionality, you should check out your server configurations and make sure you don’t have any limitation related to symlink creation.');
+		}
+	}
 	exit;
 }

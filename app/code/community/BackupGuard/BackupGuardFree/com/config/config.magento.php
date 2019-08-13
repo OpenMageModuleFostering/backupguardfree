@@ -36,7 +36,8 @@ $excludes = array(
 				  	'skin/adminhtml/base/default/js/BackupGuardFree/',
 				  	'skin/adminhtml/base/default/js/BackupGuard/',
 				  	'skin/adminhtml/base/default/media/BackupGuardFree/',
-				  	'skin/adminhtml/base/default/media/BackupGuard/'
+				  	'skin/adminhtml/base/default/media/BackupGuard/',
+				  	'var/log/'
 				);
 define('SG_BACKUP_FILE_PATHS_EXCLUDE', implode(',', $excludes));
 define('SG_BACKUP_DIRECTORY', SG_APP_PATH.'../sg_backups/'); //backups will be stored here

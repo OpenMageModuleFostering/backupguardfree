@@ -1,16 +1,19 @@
 {
-    "name": "OpenMageModuleFostering/BackupGuardFree",
+    "name": "OpenMageModuleFostering\/BackupGuardFree",
     "type": "magento-module",
     "license": "GNU-General-Public-License-(GPL)",
     "homepage": "",
     "description": "Backup Guard Lite",
     "authors": [
-    {
-        "name": "Backup Guard",
-        "email": "info@backup-guard.com"
-    }
-],
+        {
+            "name": "Backup Guard",
+            "email": "info@backup-guard.com"
+        }
+    ],
     "suggest": {
-        "magento-hackathon/magento-composer-installer": "*"
-    }
+        "magento-hackathon\/magento-composer-installer": "*"
+    },
+    "keywords": [
+        "openmage-module"
+    ]
 }
